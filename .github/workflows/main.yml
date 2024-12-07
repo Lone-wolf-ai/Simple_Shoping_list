@@ -1,60 +1,52 @@
-name: Release
+name: "Build & Release"
 
 on:
+  pull_request:
+    branches:
+      - main
+      - master
   push:
-    tags:
-      - 'v*' # Trigger the workflow on push to tags that match 'v*'
+    branches:
+      - main
+      - master
+      - develop
 
 jobs:
   build:
+    name: Build & Release
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-    - name: Set up Java
-      uses: actions/setup-java@v2
-      with:
-        java-version: '18'
-        distribution: 'zulu'
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '18'
 
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.24.5'
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          architecture: x64
 
-    - name: Get Flutter dependencies
-      run: flutter pub get
+      - name: Get Flutter dependencies
+        run: flutter pub get
 
-    - name: Build APK
-      run: flutter build apk --release
+      - name: Build APK
+        run: flutter build apk --release --split-per-abi
 
-    - name: Build AAB
-      run: flutter build appbundle --release
+      - name: Build AAB
+        run: flutter build appbundle --release
 
-    - name: Create GitHub Release
-      uses: ncipollo/release-action@v1
-      with:
-        artifacts: |
-          build/app/outputs/apk/release/*
-          build/app/outputs/bundle/release/app-release.aab
-        tag: ${{ github.ref }}
-        generateReleaseNotes: false
-        makeLatest: legacy
-        omitBody: false
-        omitBodyDuringUpdate: false
-        omitDraftDuringUpdate: false
-        omitName: false
-        omitNameDuringUpdate: false
-        omitPrereleaseDuringUpdate: false
-        removeArtifacts: false
-        replacesArtifacts: true
-        skipIfReleaseExists: false
-        updateOnlyUnreleased: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        JAVA_HOME: /opt/hostedtoolcache/Java_Zulu_jdk/18.0.2-9/x64
-        JAVA_HOME_18_X64: /opt/hostedtoolcache/Java_Zulu_jdk/18.0.2-9/x64
-        FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.24.5-x64
-        PUB_CACHE: /home/runner/.pub-cache
+      - name: Push to Releases
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: |
+            build/app/outputs/apk/release/*
+            build/app/outputs/bundle/release/app-release.aab
+          tag: v1.0.${{ github.run_number }}
+          generateReleaseNotes: true
+          replacesArtifacts: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
